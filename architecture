@@ -1,0 +1,22 @@
+fm-pg/
+│
+├── src/
+│   ├── components/
+│   │   ├── TopBar.jsx
+│   │   ├── Landing.jsx
+│   │   ├── Auth.jsx
+│   │   ├── Browse.jsx
+│   │   ├── ListingCard.jsx
+│   │   ├── Detail.jsx
+│   │   └── OwnerForm.jsx
+│   │
+│   ├── lib/
+│   │   └── supabase.js
+│   │
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
+│
+├── .env
+├── package.json
+└── vite.config.js
