@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="FM-PG project information and Netlify deployment guide"
+    />
+    <title>FM-PG | Project Info</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #18302b;
+        --muted: #60736d;
+        --paper: #f6f4ed;
+        --panel: #fffdf8;
+        --line: #d9e1d7;
+        --accent: #e06b3c;
+        --accent-dark: #b84d27;
+        --green: #2c7563;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 12% 8%, #f7d8bd 0, transparent 28%),
+          linear-gradient(135deg, #f6f4ed 0%, #e5efe6 100%);
+        font-family: Georgia, "Times New Roman", serif;
+        line-height: 1.6;
+      }
+
+      main {
+        width: min(100% - 2rem, 980px);
+        margin: 0 auto;
+        padding: 4rem 0;
+      }
+
+      .eyebrow {
+        margin: 0 0 0.75rem;
+        color: var(--green);
+        font-family: "Trebuchet MS", sans-serif;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2 {
+        margin-top: 0;
+        line-height: 1.1;
+      }
+
+      h1 {
+        max-width: 700px;
+        margin-bottom: 1rem;
+        font-size: clamp(2.8rem, 8vw, 5.8rem);
+        letter-spacing: -0.04em;
+      }
+
+      h2 {
+        margin-bottom: 0.85rem;
+        font-size: 1.8rem;
+      }
+
+      .intro {
+        max-width: 640px;
+        color: var(--muted);
+        font-size: 1.15rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        margin-top: 3rem;
+      }
+
+      section {
+        padding: 1.6rem;
+        background: color-mix(in srgb, var(--panel) 92%, transparent);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: 0 16px 40px rgb(24 48 43 / 8%);
+      }
+
+      section.full {
+        grid-column: 1 / -1;
+      }
+
+      ul,
+      ol {
+        margin: 0;
+        padding-left: 1.25rem;
+      }
+
+      li + li {
+        margin-top: 0.65rem;
+      }
+
+      code {
+        padding: 0.15rem 0.35rem;
+        color: var(--accent-dark);
+        background: #fce9dd;
+        border-radius: 4px;
+        font-family: "Courier New", monospace;
+        font-size: 0.9em;
+      }
+
+      .command {
+        display: block;
+        margin: 0.9rem 0;
+        padding: 0.9rem 1rem;
+        overflow-x: auto;
+        color: #fdf8ed;
+        background: var(--ink);
+        border-radius: 6px;
+        font-family: "Courier New", monospace;
+        font-size: 0.9rem;
+      }
+
+      a {
+        color: var(--accent-dark);
+        font-weight: 700;
+      }
+
+      footer {
+        margin-top: 2rem;
+        color: var(--muted);
+        font-family: "Trebuchet MS", sans-serif;
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 680px) {
+        main {
+          padding: 2.5rem 0;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+          margin-top: 2rem;
+        }
+
+        section.full {
+          grid-column: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">FM-PG / Project information</p>
+      <h1>Find a better PG stay.</h1>
+      <p class="intro">
+        FM-PG is a React and Supabase application for discovering, browsing, and
+        publishing paying guest accommodation listings.
+      </p>
+
+      <div class="grid">
+        <section>
+          <h2>What is included</h2>
+          <ul>
+            <li>Seeker and owner authentication flows</li>
+            <li>PG listing browsing and detail views</li>
+            <li>Owner listing submission form</li>
+            <li>Supabase-backed listings, images, and sharing options</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Local development</h2>
+          <p>Install dependencies and start the Vite development server:</p>
+          <span class="command">npm install<br />npm run dev</span>
+          <p>Build the production bundle with <code>npm run build</code>.</p>
+        </section>
+
+        <section class="full">
+          <h2>Recommended Netlify deployment</h2>
+          <ol>
+            <li>Push this project to a GitHub, GitLab, or Bitbucket repository.</li>
+            <li>In Netlify, choose <strong>Add new site</strong> and then <strong>Import an existing project</strong>.</li>
+            <li>Select the repository and use <code>npm run build</code> for the build command.</li>
+            <li>Set the publish directory to <code>dist</code>, then deploy the site.</li>
+            <li>In Netlify site settings, add the same Supabase environment variables used by <code>src/lib/supabase.js</code>.</li>
+          </ol>
+          <p>
+            Netlify will automatically rebuild the site whenever changes are pushed
+            to the selected branch. The current Vite configuration does not need a
+            special Netlify adapter.
+          </p>
+        </section>
+
+        <section class="full">
+          <h2>Before going live</h2>
+          <ul>
+            <li>Confirm the Supabase URL and anonymous key are configured as Netlify environment variables.</li>
+            <li>Check Supabase authentication redirect URLs and add the deployed Netlify domain.</li>
+            <li>Verify database row-level security policies for reading and creating listings.</li>
+            <li>Run <code>npm run build</code> locally once to catch production build errors.</li>
+          </ul>
+        </section>
+      </div>
+
+      <footer>
+        Open this page locally at <a href="/info.html">/info.html</a> while the Vite server is running.
+      </footer>
+    </main>
+  </body>
+</html>

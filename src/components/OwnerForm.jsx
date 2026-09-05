@@ -135,6 +135,10 @@ export default function OwnerForm({
     category,
     pgId
   ) {
+    // Skip if no files provided
+    if (!files || files.length === 0) {
+      return;
+    }
 
     for (
       const file of files
@@ -154,7 +158,7 @@ export default function OwnerForm({
           );
 
       if (uploadError) {
-        throw uploadError;
+        throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
       }
 
       const {
@@ -166,7 +170,7 @@ export default function OwnerForm({
             fileName
           );
 
-      await supabase
+      const { error: insertError } = await supabase
         .from("pg_images")
         .insert({
           pg_id: pgId,
@@ -175,6 +179,9 @@ export default function OwnerForm({
             data.publicUrl,
         });
 
+      if (insertError) {
+        throw new Error(`Failed to save image record: ${insertError.message}`);
+      }
     }
   }
 
@@ -184,11 +191,50 @@ export default function OwnerForm({
 
     e.preventDefault();
 
+    // Validate owner ID exists
+    if (!owner || !owner.id) {
+      alert("Error: Owner profile not found. Please sign up again.");
+      return;
+    }
+
+    // Validate required fields
+    if (!name.trim()) {
+      alert("Please enter PG name");
+      return;
+    }
+
+    if (!contact.trim()) {
+      alert("Please enter contact number");
+      return;
+    }
+
+    if (!vacancies || Number(vacancies) < 0) {
+      alert("Please enter valid number of vacancies");
+      return;
+    }
+
+    if (!deposit || Number(deposit) < 0) {
+      alert("Please enter valid deposit amount");
+      return;
+    }
+
+    // Validate at least one sharing option with price
+    const hasValidPrice = sharingOptions.some(
+      (option) => option.price && Number(option.price) > 0
+    );
+
+    if (!hasValidPrice) {
+      alert("Please add at least one sharing type with valid price");
+      return;
+    }
+
     setLoading(true);
 
     try {
 
       // 1. Create PG listing
+      console.log("Creating listing with owner_id:", owner.id);
+      console.log("Full owner object:", owner);
 
       const {
         data: listing,
@@ -198,10 +244,10 @@ export default function OwnerForm({
           .from("pg_listings")
           .insert({
             owner_id: owner.id,
-            name,
+            name: name.trim(),
             gender,
             area,
-            contact,
+            contact: contact.trim(),
             vacancies:
               Number(
                 vacancies
@@ -218,8 +264,11 @@ export default function OwnerForm({
       if (
         listingError
       ) {
-        throw listingError;
+        console.error("Listing creation error:", listingError);
+        throw new Error(`Failed to create listing: ${listingError.message}`);
       }
+
+      console.log("Listing created:", listing);
 
       // 2. Save sharing options
 
@@ -251,41 +300,61 @@ export default function OwnerForm({
       if (
         sharingError
       ) {
-        throw sharingError;
+        throw new Error(`Failed to save sharing options: ${sharingError.message}`);
       }
 
-      // 3. Upload images
+      console.log("Sharing options saved");
 
-      await uploadFiles(
-        buildingFiles,
-        "building",
-        listing.id
-      );
+      // 3. Upload images (optional)
 
-      await uploadFiles(
-        roomFiles,
-        "rooms",
-        listing.id
-      );
+      try {
+        await uploadFiles(
+          buildingFiles,
+          "building",
+          listing.id
+        );
+      } catch (err) {
+        console.warn("Warning: Building images upload failed:", err);
+      }
 
-      await uploadFiles(
-        washroomFiles,
-        "washroom",
-        listing.id
-      );
+      try {
+        await uploadFiles(
+          roomFiles,
+          "rooms",
+          listing.id
+        );
+      } catch (err) {
+        console.warn("Warning: Room images upload failed:", err);
+      }
 
-      await uploadFiles(
-        messFiles,
-        "mess",
-        listing.id
-      );
+      try {
+        await uploadFiles(
+          washroomFiles,
+          "washroom",
+          listing.id
+        );
+      } catch (err) {
+        console.warn("Warning: Washroom images upload failed:", err);
+      }
 
+      try {
+        await uploadFiles(
+          messFiles,
+          "mess",
+          listing.id
+        );
+      } catch (err) {
+        console.warn("Warning: Mess images upload failed:", err);
+      }
+
+      console.log("PG listing created successfully!");
       onSuccess();
 
     } catch (error) {
 
+      console.error("Error creating listing:", error);
       alert(
-        error.message
+        error.message || "Failed to create listing. Please try again."
       );
 
     } finally {

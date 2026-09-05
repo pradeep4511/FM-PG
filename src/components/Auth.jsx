@@ -1,13 +1,18 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 
+const PROFILE_STORAGE_PREFIX = "fm_pg_profile_";
+
+function getProfileKey(email) {
+  return `${PROFILE_STORAGE_PREFIX}${email.trim().toLowerCase()}`;
+}
+
 export default function Auth({ role, onSuccess }) {
   const [mode, setMode] = useState("signup");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
   const [location, setLocation] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -20,68 +25,60 @@ export default function Auth({ role, onSuccess }) {
     setError("");
 
     try {
+      const profileKey = getProfileKey(email);
 
       if (mode === "signup") {
+        const profileId = crypto.randomUUID();
+        
+        console.log("Creating profile with ID:", profileId);
+        
+        // Create profile in Supabase
+        const { data, error: profileError } = await supabase
+          .from("profiles")
+          .insert({
+            id: profileId,
+            name,
+            email,
+            phone,
+            role,
+            location: role === "seeker" ? location : null,
+          })
+          .select()
+          .single();
 
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password
-        });
-
-        if (error) throw error;
-
-        const user = data.user;
-
-        if (!user) {
-          throw new Error("Unable to create account");
+        if (profileError) {
+          console.error("Profile creation error:", profileError);
+          throw new Error(`Failed to create profile: ${profileError.message}`);
         }
 
-        const { error: profileError } =
-          await supabase
-            .from("profiles")
-            .insert({
-              id: user.id,
-              name,
-              email,
-              phone,
-              role,
-              location: role === "seeker" ? location : null
-            });
+        if (!data) {
+          throw new Error("Profile created but no data returned from Supabase");
+        }
 
-        if (profileError) throw profileError;
+        console.log("Profile created successfully in Supabase:", data);
 
-        onSuccess({
-          id: user.id,
-          name,
-          email,
-          phone,
-          location,
-          role
-        });
+        // Store the actual returned data from Supabase
+        const profile = data;
 
+        localStorage.setItem(profileKey, JSON.stringify(profile));
+        console.log("Profile saved to localStorage:", profile);
+        
+        // Verify profile was created
+        console.log("Profile ID being used:", profile.id);
+        
+        onSuccess(profile);
       } else {
+        const savedProfile = localStorage.getItem(profileKey);
 
-        const { data, error } =
-          await supabase.auth.signInWithPassword({
-            email,
-            password
-          });
+        if (!savedProfile) {
+          throw new Error("No account found for this email. Please create one first.");
+        }
 
-        if (error) throw error;
-
-        const { data: profile, error: profileError } =
-          await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", data.user.id)
-            .single();
-
-        if (profileError) throw profileError;
-
+        const profile = JSON.parse(savedProfile);
         onSuccess(profile);
       }
-
     } catch (err) {
+      console.error("Auth error:", err);
       setError(err.message);
     }
 
@@ -157,16 +154,6 @@ export default function Auth({ role, onSuccess }) {
             required
           />
         )}
-
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) =>
-            setPassword(e.target.value)
-          }
-          required
-        />
 
         {error && (
           <p className="error">
