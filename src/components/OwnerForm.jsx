@@ -1,14 +1,6 @@
-import {
-  useState,
-} from "react";
-
-import {
-  Plus,
-  Minus,
-} from "lucide-react";
-
-import { supabase }
-  from "../lib/supabase";
+import { useState } from "react";
+import { Plus, Minus } from "lucide-react";
+import { supabase } from "../lib/supabase";
 
 const sharingTypes = [
   "2 Sharing",
@@ -32,253 +24,340 @@ export default function OwnerForm({
   owner,
   onSuccess,
 }) {
-  const [
-    name,
-    setName,
-  ] =
-    useState("");
+  const [name, setName] = useState("");
 
-  const [
-    gender,
-    setGender,
-  ] =
+  const [gender, setGender] =
     useState("girls");
 
-  const [
-    area,
-    setArea,
-  ] =
-    useState(
-      "Koramangala"
-    );
+  const [area, setArea] =
+    useState("Koramangala");
 
-  const [
-    contact,
-    setContact,
-  ] =
-    useState(
-      owner.phone || ""
-    );
+  const [contact, setContact] =
+    useState(owner?.phone || "");
 
-  const [
-    vacancies,
-    setVacancies,
-  ] =
+  const [vacancies, setVacancies] =
     useState("");
 
-  const [
-    deposit,
-    setDeposit,
-  ] =
+  const [deposit, setDeposit] =
     useState("");
 
   const [
     sharingOptions,
     setSharingOptions,
-  ] =
-    useState([
-      {
-        type: "2 Sharing",
-        price: "",
-      },
-    ]);
+  ] = useState([
+    {
+      type: "2 Sharing",
+      price: "",
+    },
+  ]);
 
   const [
     buildingFiles,
     setBuildingFiles,
-  ] =
-    useState([]);
+  ] = useState([]);
 
   const [
     roomFiles,
     setRoomFiles,
-  ] =
-    useState([]);
+  ] = useState([]);
 
   const [
     washroomFiles,
     setWashroomFiles,
-  ] =
-    useState([]);
+  ] = useState([]);
 
   const [
     messFiles,
     setMessFiles,
-  ] =
-    useState([]);
+  ] = useState([]);
 
-  const [
-    loading,
-    setLoading,
-  ] =
+  const [loading, setLoading] =
     useState(false);
+
 
   function updateOption(
     index,
     field,
     value
   ) {
+    const updated = [
+      ...sharingOptions,
+    ];
 
-    const updated =
-      [...sharingOptions];
+    updated[index][field] = value;
 
-    updated[index][field] =
-      value;
-
-    setSharingOptions(
-      updated
-    );
+    setSharingOptions(updated);
   }
+
 
   async function uploadFiles(
     files,
     category,
     pgId
   ) {
-    // Skip if no files provided
     if (!files || files.length === 0) {
       return;
     }
 
-    for (
-      const file of files
-    ) {
-
+    for (const file of files) {
       const fileName =
         `${pgId}/${Date.now()}-${file.name}`;
 
       const {
         error: uploadError,
-      } =
-        await supabase.storage
-          .from("pg-images")
-          .upload(
-            fileName,
-            file
-          );
+      } = await supabase.storage
+        .from("pg-images")
+        .upload(
+          fileName,
+          file
+        );
 
       if (uploadError) {
-        throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+        throw new Error(
+          `Failed to upload ${file.name}: ${uploadError.message}`
+        );
       }
 
       const {
-        data,
-      } =
-        supabase.storage
-          .from("pg-images")
-          .getPublicUrl(
-            fileName
-          );
+        data: publicUrlData,
+      } = supabase.storage
+        .from("pg-images")
+        .getPublicUrl(fileName);
 
-      const { error: insertError } = await supabase
+      const {
+        error: imageInsertError,
+      } = await supabase
         .from("pg_images")
         .insert({
           pg_id: pgId,
           category,
           image_url:
-            data.publicUrl,
+            publicUrlData.publicUrl,
         });
 
-      if (insertError) {
-        throw new Error(`Failed to save image record: ${insertError.message}`);
+      if (imageInsertError) {
+        throw new Error(
+          `Failed to save image record: ${imageInsertError.message}`
+        );
       }
     }
   }
 
-  async function handleSubmit(
-    e
-  ) {
 
+  async function handleSubmit(e) {
     e.preventDefault();
 
-    // Validate owner ID exists
-    if (!owner || !owner.id) {
-      alert("Error: Owner profile not found. Please sign up again.");
-      return;
-    }
 
-    // Validate required fields
+    // Basic validation
+
     if (!name.trim()) {
       alert("Please enter PG name");
       return;
     }
 
+
     if (!contact.trim()) {
-      alert("Please enter contact number");
+      alert(
+        "Please enter contact number"
+      );
       return;
     }
 
-    if (!vacancies || Number(vacancies) < 0) {
-      alert("Please enter valid number of vacancies");
+
+    if (
+      vacancies === "" ||
+      Number(vacancies) < 0
+    ) {
+      alert(
+        "Please enter valid number of vacancies"
+      );
       return;
     }
 
-    if (!deposit || Number(deposit) < 0) {
-      alert("Please enter valid deposit amount");
+
+    if (
+      deposit === "" ||
+      Number(deposit) < 0
+    ) {
+      alert(
+        "Please enter valid deposit amount"
+      );
       return;
     }
 
-    // Validate at least one sharing option with price
-    const hasValidPrice = sharingOptions.some(
-      (option) => option.price && Number(option.price) > 0
-    );
+
+    const hasValidPrice =
+      sharingOptions.some(
+        (option) =>
+          option.price !== "" &&
+          Number(option.price) > 0
+      );
+
 
     if (!hasValidPrice) {
-      alert("Please add at least one sharing type with valid price");
+      alert(
+        "Please add at least one sharing type with valid price"
+      );
       return;
     }
+
 
     setLoading(true);
 
-    try {
 
-      // 1. Create PG listing
-      console.log("Creating listing with owner_id:", owner.id);
-      console.log("Full owner object:", owner);
+    try {
+      /*
+       * STEP 1
+       * Get current authenticated user
+       */
+
+      const {
+        data: {
+          user: authUser,
+        },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+
+      if (authError) {
+        throw authError;
+      }
+
+
+      if (!authUser) {
+        throw new Error(
+          "No authenticated user found. Please log out and log in again."
+        );
+      }
+
+
+      console.log(
+        "CURRENT AUTH USER ID:",
+        authUser.id
+      );
+
+
+      /*
+       * STEP 2
+       * Verify matching profile exists
+       */
+
+      const {
+        data: currentProfile,
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq(
+          "id",
+          authUser.id
+        )
+        .single();
+
+
+      if (
+        profileError ||
+        !currentProfile
+      ) {
+        throw new Error(
+          `Owner profile not found: ${
+            profileError?.message ||
+            "Unknown error"
+          }`
+        );
+      }
+
+
+      /*
+       * STEP 3
+       * Verify this account is an owner
+       */
+
+      if (
+        currentProfile.role !==
+        "owner"
+      ) {
+        throw new Error(
+          "Only PG owners can create a PG listing."
+        );
+      }
+
+
+      console.log(
+        "OWNER PROFILE:",
+        currentProfile
+      );
+
+
+      /*
+       * STEP 4
+       * Create PG listing
+       */
 
       const {
         data: listing,
         error: listingError,
-      } =
-        await supabase
-          .from("pg_listings")
-          .insert({
-            owner_id: owner.id,
-            name: name.trim(),
-            gender,
-            area,
-            contact: contact.trim(),
-            vacancies:
-              Number(
-                vacancies
-              ),
-            deposit:
-              Number(
-                deposit
-              ),
-            rating: 0,
-          })
-          .select()
-          .single();
+      } = await supabase
+        .from("pg_listings")
+        .insert({
+          owner_id:
+            authUser.id,
 
-      if (
-        listingError
-      ) {
-        console.error("Listing creation error:", listingError);
-        throw new Error(`Failed to create listing: ${listingError.message}`);
+          name:
+            name.trim(),
+
+          gender,
+
+          area,
+
+          contact:
+            contact.trim(),
+
+          vacancies:
+            Number(vacancies),
+
+          deposit:
+            Number(deposit),
+
+          rating:
+            0,
+        })
+        .select()
+        .single();
+
+
+      if (listingError) {
+        console.error(
+          "Listing creation error:",
+          listingError
+        );
+
+        throw new Error(
+          `Failed to create listing: ${listingError.message}`
+        );
       }
 
-      console.log("Listing created:", listing);
 
-      // 2. Save sharing options
+      console.log(
+        "PG LISTING CREATED:",
+        listing
+      );
+
+
+      /*
+       * STEP 5
+       * Save sharing options
+       */
 
       const sharingData =
         sharingOptions.map(
           (option) => ({
             pg_id:
               listing.id,
+
             sharing_type:
               option.type,
+
             price:
               Number(
                 option.price
@@ -286,26 +365,34 @@ export default function OwnerForm({
           })
         );
 
+
       const {
         error: sharingError,
-      } =
-        await supabase
-          .from(
-            "pg_sharing_options"
-          )
-          .insert(
-            sharingData
-          );
+      } = await supabase
+        .from(
+          "pg_sharing_options"
+        )
+        .insert(
+          sharingData
+        );
 
-      if (
-        sharingError
-      ) {
-        throw new Error(`Failed to save sharing options: ${sharingError.message}`);
+
+      if (sharingError) {
+        throw new Error(
+          `Failed to save sharing options: ${sharingError.message}`
+        );
       }
 
-      console.log("Sharing options saved");
 
-      // 3. Upload images (optional)
+      console.log(
+        "SHARING OPTIONS SAVED"
+      );
+
+
+      /*
+       * STEP 6
+       * Upload building images
+       */
 
       try {
         await uploadFiles(
@@ -313,9 +400,18 @@ export default function OwnerForm({
           "building",
           listing.id
         );
-      } catch (err) {
-        console.warn("Warning: Building images upload failed:", err);
+      } catch (error) {
+        console.warn(
+          "Building images failed:",
+          error
+        );
       }
+
+
+      /*
+       * STEP 7
+       * Upload room images
+       */
 
       try {
         await uploadFiles(
@@ -323,9 +419,18 @@ export default function OwnerForm({
           "rooms",
           listing.id
         );
-      } catch (err) {
-        console.warn("Warning: Room images upload failed:", err);
+      } catch (error) {
+        console.warn(
+          "Room images failed:",
+          error
+        );
       }
+
+
+      /*
+       * STEP 8
+       * Upload washroom images
+       */
 
       try {
         await uploadFiles(
@@ -333,9 +438,18 @@ export default function OwnerForm({
           "washroom",
           listing.id
         );
-      } catch (err) {
-        console.warn("Warning: Washroom images upload failed:", err);
+      } catch (error) {
+        console.warn(
+          "Washroom images failed:",
+          error
+        );
       }
+
+
+      /*
+       * STEP 9
+       * Upload mess images
+       */
 
       try {
         await uploadFiles(
@@ -343,19 +457,40 @@ export default function OwnerForm({
           "mess",
           listing.id
         );
-      } catch (err) {
-        console.warn("Warning: Mess images upload failed:", err);
+      } catch (error) {
+        console.warn(
+          "Mess images failed:",
+          error
+        );
       }
 
-      console.log("PG listing created successfully!");
+
+      console.log(
+        "PG LISTING CREATED SUCCESSFULLY"
+      );
+
+
+      alert(
+        "PG listed successfully!"
+      );
+
+
       onSuccess();
+
 
     } catch (error) {
 
-      console.error("Error creating listing:", error);
-      alert(
-        error.message || "Failed to create listing. Please try again."
+      console.error(
+        "Error creating listing:",
+        error
       );
+
+
+      alert(
+        error.message ||
+        "Failed to create listing. Please try again."
+      );
+
 
     } finally {
 
@@ -363,6 +498,7 @@ export default function OwnerForm({
 
     }
   }
+
 
   return (
     <main className="owner-page">
@@ -378,10 +514,9 @@ export default function OwnerForm({
           so seekers can find it.
         </p>
 
+
         <form
-          onSubmit={
-            handleSubmit
-          }
+          onSubmit={handleSubmit}
         >
 
           <label>
@@ -396,8 +531,8 @@ export default function OwnerForm({
               }
               required
             />
-
           </label>
+
 
           <label>
             PG Type
@@ -410,7 +545,6 @@ export default function OwnerForm({
                 )
               }
             >
-
               <option value="girls">
                 Girls
               </option>
@@ -424,8 +558,8 @@ export default function OwnerForm({
               </option>
 
             </select>
-
           </label>
+
 
           <label>
             Area
@@ -438,22 +572,18 @@ export default function OwnerForm({
                 )
               }
             >
-
               {areas.map(
                 (item) => (
-
                   <option
                     key={item}
                   >
                     {item}
                   </option>
-
                 )
               )}
-
             </select>
-
           </label>
+
 
           <label>
             Contact Number
@@ -467,8 +597,8 @@ export default function OwnerForm({
               }
               required
             />
-
           </label>
+
 
           <label>
             Number of Vacancies
@@ -484,27 +614,30 @@ export default function OwnerForm({
               }
               required
             />
-
           </label>
+
 
           <label>
             Security Deposit ₹
 
             <input
               type="number"
+              min="0"
               value={deposit}
               onChange={(e) =>
                 setDeposit(
                   e.target.value
                 )
               }
+              required
             />
-
           </label>
+
 
           <h3>
             Sharing & Price
           </h3>
+
 
           {sharingOptions.map(
             (
@@ -529,23 +662,21 @@ export default function OwnerForm({
                     )
                   }
                 >
-
                   {sharingTypes.map(
                     (type) => (
-
                       <option
                         key={type}
                       >
                         {type}
                       </option>
-
                     )
                   )}
-
                 </select>
+
 
                 <input
                   type="number"
+                  min="1"
                   placeholder="Price ₹"
                   value={
                     option.price
@@ -559,6 +690,7 @@ export default function OwnerForm({
                   }
                   required
                 />
+
 
                 {sharingOptions.length >
                   1 && (
@@ -590,6 +722,7 @@ export default function OwnerForm({
             )
           )}
 
+
           <button
             type="button"
             className="add-sharing"
@@ -599,18 +732,18 @@ export default function OwnerForm({
                 {
                   type:
                     "2 Sharing",
+
                   price:
                     "",
                 },
               ])
             }
           >
-
             <Plus size={16} />
 
             Add Sharing Type
-
           </button>
+
 
           <label>
             Building Images
@@ -627,8 +760,8 @@ export default function OwnerForm({
                 )
               }
             />
-
           </label>
+
 
           <label>
             Room Images
@@ -645,8 +778,8 @@ export default function OwnerForm({
                 )
               }
             />
-
           </label>
+
 
           <label>
             Washroom Images
@@ -663,8 +796,8 @@ export default function OwnerForm({
                 )
               }
             />
-
           </label>
+
 
           <label>
             Mess Images
@@ -681,21 +814,17 @@ export default function OwnerForm({
                 )
               }
             />
-
           </label>
+
 
           <button
             type="submit"
             className="primary-btn full-btn"
-            disabled={
-              loading
-            }
+            disabled={loading}
           >
-
             {loading
               ? "Uploading..."
               : "List My PG"}
-
           </button>
 
         </form>
