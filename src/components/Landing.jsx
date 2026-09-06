@@ -1,45 +1,84 @@
 export default function Landing({
-  onSelectRole,
+  onBrowse,
+  onOwner,
 }) {
   return (
     <main className="landing">
 
-      <p className="landing-small">
-        Bengaluru, one room at a time
-      </p>
+      <section className="hero">
 
-      <h1>
-        Find a PG that actually
-        has a vacancy.
-      </h1>
+        <div className="hero-content">
 
-      <p className="landing-description">
-        Find PGs and hostels listed by
-        real owners. Filter by sharing type,
-        budget, ratings and distance.
-      </p>
+          <span className="hero-tag">
+            Find Your Perfect Stay
+          </span>
 
-      <div className="landing-buttons">
+          <h1>
+            Find the Perfect
+            <span> PG Near You</span>
+          </h1>
 
-        <button
-          className="primary-btn"
-          onClick={() =>
-            onSelectRole("seeker")
-          }
-        >
-          Find a PG
-        </button>
+          <p>
+            Discover verified PGs,
+            compare prices and find
+            your comfortable home.
+          </p>
 
-        <button
-          className="secondary-btn"
-          onClick={() =>
-            onSelectRole("owner")
-          }
-        >
-          I own a PG
-        </button>
+          <div className="hero-actions">
 
-      </div>
+            <button
+              className="primary-btn"
+              onClick={onBrowse}
+            >
+              Explore PGs
+            </button>
+
+            <button
+              className="secondary-btn"
+              onClick={onOwner}
+            >
+              List Your PG
+            </button>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <section className="landing-features">
+
+        <div className="feature-card">
+          <h3>🏠 Easy Search</h3>
+
+          <p>
+            Find PGs based on
+            location and preferences.
+          </p>
+        </div>
+
+
+        <div className="feature-card">
+          <h3>💰 Compare Prices</h3>
+
+          <p>
+            Compare sharing options
+            and monthly prices.
+          </p>
+        </div>
+
+
+        <div className="feature-card">
+          <h3>📸 Real Images</h3>
+
+          <p>
+            View uploaded PG,
+            room and facility images.
+          </p>
+        </div>
+
+      </section>
 
     </main>
   );
