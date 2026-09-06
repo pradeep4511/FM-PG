@@ -1,36 +1,80 @@
-import { supabase } from "./supabase";
+import { supabase } from "./lib/supabase";
 
 export async function uploadImage(file, pgId, category) {
-  const fileName = `${pgId}/${Date.now()}-${file.name}`;
-
-  // Upload image to Supabase Storage
-  const { error: uploadError } = await supabase.storage
-    .from("pg-images")
-    .upload(fileName, file);
-
-  if (uploadError) {
-    throw uploadError;
+  if (!file) {
+    throw new Error("No image selected");
   }
 
-  // Get public URL
-  const { data } = supabase.storage
+  const cleanFileName = file.name.replace(
+    /[^a-zA-Z0-9.-]/g,
+    "_"
+  );
+
+  const filePath =
+    `${pgId}/${Date.now()}-${cleanFileName}`;
+
+  const {
+    data: uploadData,
+    error: uploadError,
+  } = await supabase.storage
     .from("pg-images")
-    .getPublicUrl(fileName);
+    .upload(
+      filePath,
+      file,
+      {
+        contentType: file.type,
+        upsert: false,
+      }
+    );
 
-  const imageUrl = data.publicUrl;
+  if (uploadError) {
+    console.error(
+      "STORAGE UPLOAD ERROR:",
+      uploadError
+    );
 
-  // Save image information in database
-  const { error: databaseError } = await supabase
+    throw new Error(
+      `Image upload failed: ${uploadError.message}`
+    );
+  }
+
+  const {
+    data: publicUrlData,
+  } = supabase.storage
+    .from("pg-images")
+    .getPublicUrl(filePath);
+
+  const imageUrl =
+    publicUrlData.publicUrl;
+
+  const {
+    data: imageRecord,
+    error: databaseError,
+  } = await supabase
     .from("pg_images")
     .insert({
       pg_id: pgId,
-      category: category,
+      category,
       image_url: imageUrl,
-    });
+    })
+    .select()
+    .single();
 
   if (databaseError) {
-    throw databaseError;
+    console.error(
+      "DATABASE IMAGE ERROR:",
+      databaseError
+    );
+
+    throw new Error(
+      `Image database save failed: ${databaseError.message}`
+    );
   }
+
+  console.log(
+    "IMAGE UPLOADED AND SAVED:",
+    imageRecord
+  );
 
   return imageUrl;
 }

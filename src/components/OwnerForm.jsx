@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Minus } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { uploadImage } from "/workspaces/FM-PG/src/uploadImage.js";
 
 const sharingTypes = [
   "2 Sharing",
