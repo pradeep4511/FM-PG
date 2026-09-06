@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 
-const PROFILE_STORAGE_PREFIX = "fm_pg_profile_";
-
-function getProfileKey(email) {
-  return `${PROFILE_STORAGE_PREFIX}${email.trim().toLowerCase()}`;
-}
-
 export default function Auth({ role, onSuccess }) {
   const [mode, setMode] = useState("signup");
 
@@ -14,6 +8,7 @@ export default function Auth({ role, onSuccess }) {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [location, setLocation] = useState("");
+  const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,64 +20,119 @@ export default function Auth({ role, onSuccess }) {
     setError("");
 
     try {
-      const profileKey = getProfileKey(email);
-
       if (mode === "signup") {
-        const profileId = crypto.randomUUID();
-        
-        console.log("Creating profile with ID:", profileId);
-        
-        // Create profile in Supabase
-        const { data, error: profileError } = await supabase
+        // STEP 1: Create real Supabase Auth user
+        const {
+          data: authData,
+          error: authError,
+        } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+        });
+
+        if (authError) {
+          throw authError;
+        }
+
+        const authUser = authData.user;
+
+        if (!authUser) {
+          throw new Error(
+            "Account was not created. Please try again."
+          );
+        }
+        console.log("AUTH DATA:", authData);
+console.log("AUTH USER:", authData.user);
+console.log("AUTH USER ID:", authData.user.id);
+console.log(
+  "PROFILE ID BEING INSERTED:",
+  authData.user.id
+);
+
+        // STEP 2: Create matching profile using SAME Auth UUID
+        const {
+          data: profile,
+          error: profileError,
+        } = await supabase
           .from("profiles")
           .insert({
-            id: profileId,
-            name,
-            email,
-            phone,
+            id: authUser.id,
+            name: name.trim(),
+            email: email.trim(),
+            phone: phone.trim(),
             role,
-            location: role === "seeker" ? location : null,
+            location:
+              role === "seeker"
+                ? location.trim()
+                : null,
           })
           .select()
           .single();
 
         if (profileError) {
-          console.error("Profile creation error:", profileError);
-          throw new Error(`Failed to create profile: ${profileError.message}`);
+          throw profileError;
         }
 
-        if (!data) {
-          throw new Error("Profile created but no data returned from Supabase");
-        }
+        alert(
+          "Account created successfully!"
+        );
 
-        console.log("Profile created successfully in Supabase:", data);
-
-        // Store the actual returned data from Supabase
-        const profile = data;
-
-        localStorage.setItem(profileKey, JSON.stringify(profile));
-        console.log("Profile saved to localStorage:", profile);
-        
-        // Verify profile was created
-        console.log("Profile ID being used:", profile.id);
-        
         onSuccess(profile);
-      } else {
-        const savedProfile = localStorage.getItem(profileKey);
 
-        if (!savedProfile) {
-          throw new Error("No account found for this email. Please create one first.");
+      } else {
+
+        // LOGIN USING SUPABASE AUTH
+        const {
+          data: loginData,
+          error: loginError,
+        } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+        if (loginError) {
+          throw loginError;
         }
 
-        const profile = JSON.parse(savedProfile);
+        const authUser = loginData.user;
+
+        if (!authUser) {
+          throw new Error(
+            "Login failed. User not found."
+          );
+        }
+
+        // LOAD PROFILE USING AUTH USER ID
+        const {
+          data: profile,
+          error: profileError,
+        } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", authUser.id)
+          .single();
+
+        if (profileError) {
+          throw profileError;
+        }
+
         onSuccess(profile);
       }
-    } catch (err) {
-      console.error("Auth error:", err);
-      setError(err.message);
-    }
 
-    setLoading(false);
+    } catch (err) {
+      console.error(
+        "Authentication error:",
+        err
+      );
+
+      setError(
+        err.message ||
+        "Something went wrong"
+      );
+
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -97,13 +147,21 @@ export default function Auth({ role, onSuccess }) {
       <div className="auth-toggle">
 
         <button
-          onClick={() => setMode("signup")}
+          type="button"
+          onClick={() => {
+            setMode("signup");
+            setError("");
+          }}
         >
           Create Account
         </button>
 
         <button
-          onClick={() => setMode("login")}
+          type="button"
+          onClick={() => {
+            setMode("login");
+            setError("");
+          }}
         >
           Login
         </button>
@@ -144,16 +202,30 @@ export default function Auth({ role, onSuccess }) {
           required
         />
 
-        {mode === "signup" && role === "seeker" && (
-          <input
-            placeholder="Your location"
-            value={location}
-            onChange={(e) =>
-              setLocation(e.target.value)
-            }
-            required
-          />
-        )}
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) =>
+            setPassword(e.target.value)
+          }
+          required
+          minLength="6"
+        />
+
+        {mode === "signup" &&
+          role === "seeker" && (
+            <input
+              placeholder="Your location"
+              value={location}
+              onChange={(e) =>
+                setLocation(
+                  e.target.value
+                )
+              }
+              required
+            />
+          )}
 
         {error && (
           <p className="error">
