@@ -1,35 +1,38 @@
 {
-  "background_color": "#ffffff",
-  "description": "FM-PG is an open source application that makes easier to find your PG hostel and saves your time and money. Instead of searching on roads and street by street , here is our platform where every details you need to be in the PG Hostel are enlisted.",
-  "dir": "ltr",
-  "display": "fullscreen",
+  "id": "/",
   "name": "FM-PG",
-  "orientation": "any",
-  "scope": "/https://fm-pg.vercel.app/",
   "short_name": "FM-PG",
-  "start_url": "https://fm-pg.vercel.app/",
+  "description": "FM-PG helps users find PG hostels and accommodation easily, saving time and effort by providing important PG details in one platform.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
   "theme_color": "#ffffff",
-  "id": "find_my_pg",
   "lang": "en",
-  "display_override": [
-    "window-controls-overlay",
-    "standalone"
-  ],
-  "shortcuts": [
-    {
-      "name": "FM PG",
-      "url": "https://fm-pg.vercel.app/",
-      "description": null
-    }
-  ],
   "categories": [
-    "business",
-    "food",
     "navigation",
-    "shopping",
-    "social"
+    "travel",
+    "utilities"
   ],
-  "share_target": {
-    "method": "GET"
-  }
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }
