@@ -36,7 +36,11 @@ export default function TopBar({
           </button>
 
         </div>
-      ) }
+      ) : (
+        <span className="nav-text">
+          Bengaluru PG Finder
+        </span>
+      )}
 
     </nav>
   );
